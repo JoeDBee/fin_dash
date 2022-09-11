@@ -1,15 +1,15 @@
+import i18n
 import pandas as pd
 import plotly.express as px
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 
 from . import ids
+from ..data.source import DataSource
 from ..data.loader import DataSchema
 
-MEDAL_DATA = px.data.medals_long()
 
-
-def render(app: Dash, data: pd.DataFrame) -> html.Div:
+def render(app: Dash, source: DataSource) -> html.Div:
     @app.callback(
         Output(ids.BAR_CHART, "children"),
         [
@@ -22,25 +22,20 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
     # which is perhaps not ideal. Useful for a fun application though :)
     def update_bar_chart(years: list[str], months: list[str], categories: list[str]) -> html.Div:
         # similar to above comment, python magic with @nations
-        filtered_data = data.query("year in @years and month in @months and category in @categories")
+        filtered_source = source.filter(years, months, categories)
 
-        if not filtered_data.shape[0]:
-            return html.Div("No data selected :(")
-
-        def create_pivot_table() -> pd.DataFrame:
-            pt = filtered_data.pivot_table(
-                values=DataSchema.AMOUNT,
-                index=DataSchema.CATEGORY,
-                aggfunc="sum",
-                fill_value=0
-            )
-            return pt.reset_index().sort_values(DataSchema.AMOUNT, ascending=False)
+        if not filtered_source.row_count:
+            return html.Div(i18n.t("general.no_data"), id=ids.BAR_CHART)
 
         fig = px.bar(
-            create_pivot_table(),
+            filtered_source.create_pivot_table(),
             x=DataSchema.CATEGORY,
             y=DataSchema.AMOUNT,
             color=DataSchema.CATEGORY,
+            labels={
+                "category": i18n.t("general.category"),
+                "amount": i18n.t("general.amount")
+            }
         )
         return html.Div(dcc.Graph(figure=fig), id=ids.BAR_CHART)
 

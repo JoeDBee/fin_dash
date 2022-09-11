@@ -1,35 +1,33 @@
-import pandas as pd
+import i18n
 from dash import Dash, html, dcc
 from dash.dependencies import Input, Output
 
 from . import ids
-from ..data.loader import DataSchema
+from .dropdown_helper import to_dropdown_options
+from ..data.source import DataSource
 
 
-def render(app: Dash, data: pd.DataFrame) -> html.Div:
-    all_years: list[str] = data[DataSchema.YEAR].tolist()
-    # Needed to manage multiple transactions in same year
-    unique_years = sorted(set(all_years), key=int)
+def render(app: Dash, source: DataSource) -> html.Div:
 
     @app.callback(
         Output(ids.YEAR_DROPDOWN, "value"),
         Input(ids.SELECT_ALL_YEARS_BUTTON, "n_clicks"),
     )
     def select_all_years(_: int) -> list[str]:
-        return unique_years
+        return source.unique_years
 
     return html.Div(
         children=[
-            html.H6("Year"),
+            html.H6(i18n.t("general.year")),
             dcc.Dropdown(
                 id=ids.YEAR_DROPDOWN,
-                options=[{"label": year, "value": year} for year in unique_years],
-                value=unique_years,
+                options=to_dropdown_options(source.unique_years),
+                value=source.unique_years,
                 multi=True
             ),
             html.Button(
                 className="dropdown-button",
-                children=["Select All"],
+                children=[i18n.t("general.select_all")],
                 id=ids.SELECT_ALL_YEARS_BUTTON,
                 n_clicks=0
             )
